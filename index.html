@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AutoApunte</title>
+<link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<style>
+  :root{--primary:#1a73e8;--hover:#1557b0;--bg:#f8f9fa;--surface:#fff;--border:#dadce0;--text:#202124;--muted:#5f6368;--danger:#d93025}
+  *{box-sizing:border-box;font-family:'Google Sans','Product Sans',Arial,sans-serif}
+  body{background:var(--bg);color:var(--text);margin:0;padding:24px}
+  .container{max-width:900px;margin:0 auto}
+  header{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 24px;margin-bottom:24px}
+  h1{margin:0;font-size:20px;font-weight:500;display:flex;align-items:center;gap:10px}
+  header p{margin:6px 0 0 34px;font-size:14px;color:var(--muted)}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+  .card h2{margin:0 0 16px;font-size:15px;font-weight:500;display:flex;align-items:center;gap:8px;color:var(--primary)}
+  .fila{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px}
+  label.t{display:block;font-size:12px;font-weight:500;color:var(--muted);margin-bottom:6px}
+  select{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;background:#fff;color:var(--text)}
+  select:focus{outline:none;border-color:var(--primary)}
+  select:disabled{background:#f1f3f4;color:#9aa0a6}
+  .apartados{margin-top:16px;display:flex;flex-direction:column;gap:6px}
+  .apartados label{display:flex;align-items:center;gap:10px;font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer}
+  .apartados label:hover{background:#f1f3f4}
+  .apartados input{accent-color:var(--primary);width:16px;height:16px}
+  button{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-weight:500;cursor:pointer;transition:all .2s}
+  button:hover{background:#f1f3f4}
+  button.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+  button.primary:hover{background:var(--hover)}
+  button:disabled{opacity:.6;cursor:wait}
+  button.danger{color:var(--danger);border-color:transparent;padding:6px}
+  button.danger:hover{background:#fce8e6}
+  .acciones{display:flex;gap:12px;flex-wrap:wrap;margin-top:16px}
+  ol{margin:0;padding:0;list-style:none}
+  ol li{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:14px}
+  ol li span.txt{flex:1}
+  .vacio{font-size:14px;color:var(--muted)}
+  #estado{font-size:13px;color:var(--muted);margin-top:12px;min-height:18px}
+
+  /* Documento PDF: ancho útil = 210mm - 2x12mm = 186mm. El documento usa solo el 94% como margen de seguridad */
+  #zona-render{position:fixed;left:-10000px;top:0;width:186mm}
+  #pdf-doc{width:94%;background:#fff;color:#000;font-size:12pt;line-height:1.5;text-align:left;margin:0;padding:0;
+    text-rendering:geometricPrecision;font-kerning:none;letter-spacing:0;word-spacing:0}
+  #pdf-doc .ap{margin-bottom:22px}
+  #pdf-doc .ruta{font-size:9pt;text-transform:uppercase;letter-spacing:0;color:#5f6368;break-after:avoid;page-break-after:avoid}
+  #pdf-doc h2{font-size:16pt;color:#1a73e8;font-weight:700;margin:4px 0 14px;padding-bottom:6px;border-bottom:1px solid #dadce0;break-after:avoid;page-break-after:avoid}
+  #pdf-doc h3{font-size:13pt;font-weight:700;margin:14px 0 6px;break-after:avoid;page-break-after:avoid}
+  #pdf-doc p{margin:0 0 8px;font-size:12pt;line-height:1.5;text-align:left;overflow-wrap:anywhere;break-inside:avoid;page-break-inside:avoid}
+  #pdf-doc strong{font-weight:700}
+  #pdf-doc u{text-decoration:underline}
+  #pdf-doc .figura{text-align:center;margin:10px 0;break-inside:avoid;page-break-inside:avoid}
+  #pdf-doc .figura img{max-width:100%;height:auto;display:inline-block}
+  #pdf-doc .aviso{color:#d93025;font-style:italic}
+</style>
+</head>
+<body>
+<div class="container">
+  <header>
+    <h1><span class="material-icons-outlined" style="color:var(--primary)">menu_book</span>AutoApunte</h1>
+    <p>Elige los apartados que necesitas y descárgalos juntos en un único PDF.</p>
+  </header>
+
+  <section class="card">
+    <h2><span class="material-icons-outlined">tune</span>Selección de contenidos</h2>
+    <div class="fila">
+      <div><label class="t" for="selCurso">Curso</label><select id="selCurso"></select></div>
+      <div><label class="t" for="selAsig">Asignatura</label><select id="selAsig" disabled></select></div>
+      <div><label class="t" for="selTema">Tema</label><select id="selTema" disabled></select></div>
+    </div>
+    <div class="apartados" id="apartados"></div>
+    <div class="acciones">
+      <button id="btnAnadir"><span class="material-icons-outlined">playlist_add</span>Añadir al documento</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2><span class="material-icons-outlined">list_alt</span>Contenido del documento</h2>
+    <ol id="lista"></ol>
+    <div class="acciones">
+      <button id="btnVaciar"><span class="material-icons-outlined">delete_outline</span>Vaciar selección</button>
+      <button class="primary" id="btnPDF"><span class="material-icons-outlined">picture_as_pdf</span>Generar PDF</button>
+    </div>
+    <div id="estado"></div>
+  </section>
+</div>
+
+<div id="zona-render"><div id="pdf-doc"></div></div>
+
+<script>
+(function(){
+'use strict';
+var datos={cursos:[]}, sel=[];
+var $=function(id){return document.getElementById(id)};
+function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
+function estado(m){$('estado').textContent=m}
+
+function llenar(s,items,txt){
+  s.innerHTML='<option value="">'+txt+'</option>';
+  items.forEach(function(it,i){var o=document.createElement('option');o.value=i;o.textContent=it.nombre;s.appendChild(o)});
+  s.disabled=!items.length;
+}
+function C(){var i=$('selCurso').value;return i===''?null:datos.cursos[i]}
+function A(){var c=C(),i=$('selAsig').value;return(c&&i!=='')?c.asignaturas[i]:null}
+function T(){var a=A(),i=$('selTema').value;return(a&&i!=='')?a.temas[i]:null}
+
+function pintarApartados(){
+  var cont=$('apartados');cont.innerHTML='';
+  var t=T();if(!t)return;
+  (t.apartados||[]).forEach(function(ap,i){
+    var l=document.createElement('label');
+    l.innerHTML='<input type="checkbox" value="'+i+'"> '+esc(ap.nombre);
+    cont.appendChild(l);
+  });
+}
+function pintarLista(){
+  var ol=$('lista');ol.innerHTML='';
+  if(!sel.length){ol.innerHTML='<li class="vacio" style="border:none">Todavía no has añadido ningún apartado.</li>';return}
+  sel.forEach(function(s,i){
+    var li=document.createElement('li');
+    li.innerHTML='<span class="txt">'+esc(s.c.nombre+' / '+s.a.nombre+' / '+s.t.nombre+' / '+s.p.nombre)+'</span>'+
+      '<button class="danger" title="Quitar"><span class="material-icons-outlined">close</span></button>';
+    li.querySelector('button').onclick=function(){sel.splice(i,1);pintarLista()};
+    ol.appendChild(li);
+  });
+}
+
+/* ---------- TXT -> HTML ---------- */
+function inline(t){
+  var h=esc(t);
+  h=h.replace(/\*\*([\s\S]+?)\*\*/g,'<strong>$1</strong>');
+  h=h.replace(/__([\s\S]+?)__/g,'<u>$1</u>');
+  return h;
+}
+function parsear(txt){
+  var html='';
+  txt=txt.replace(/\r\n?/g,'\n').replace(/\s*(\[fotos\/[^\]]+\])\s*/g,'\n\n$1\n\n');
+  txt.split(/\n{2,}/).forEach(function(b){
+    var buf=[];
+    function vaciar(){if(buf.length){html+='<p>'+buf.map(inline).join('<br>')+'</p>';buf=[]}}
+    b.split('\n').forEach(function(l){
+      l=l.trim();if(!l)return;
+      var m=l.match(/^\[(fotos\/[^\]]+)\]$/);
+      if(m){vaciar();html+='<div class="figura"><img src="textos/'+esc(m[1])+'" alt=""></div>'}
+      else if(/^#{2,3}\s+/.test(l)){vaciar();html+='<h3>'+inline(l.replace(/^#{2,3}\s+/,''))+'</h3>'}
+      else buf.push(l);
+    });
+    vaciar();
+  });
+  return html;
+}
+function esperarImagenes(raiz){
+  return Promise.all(Array.prototype.map.call(raiz.querySelectorAll('img'),function(img){
+    return new Promise(function(res){
+      if(img.complete){res();return}
+      img.onload=img.onerror=function(){res()};
+    });
+  }));
+}
+
+/* ---------- Eventos ---------- */
+$('selCurso').onchange=function(){var c=C();llenar($('selAsig'),c?c.asignaturas:[],'Seleccionar asignatura');llenar($('selTema'),[],'Seleccionar tema');pintarApartados()};
+$('selAsig').onchange=function(){var a=A();llenar($('selTema'),a?a.temas:[],'Seleccionar tema');pintarApartados()};
+$('selTema').onchange=pintarApartados;
+
+$('btnAnadir').onclick=function(){
+  var c=C(),a=A(),t=T();
+  if(!c||!a||!t){estado('Selecciona curso, asignatura y tema.');return}
+  var checks=$('apartados').querySelectorAll('input:checked');
+  if(!checks.length){estado('Marca al menos un apartado.');return}
+  Array.prototype.forEach.call(checks,function(ch){sel.push({c:c,a:a,t:t,p:t.apartados[ch.value]})});
+  pintarLista();estado(checks.length+' apartado(s) añadido(s).');
+  Array.prototype.forEach.call(checks,function(ch){ch.checked=false});
+};
+$('btnVaciar').onclick=function(){sel=[];pintarLista();estado('')};
+
+$('btnPDF').onclick=async function(){
+  if(!sel.length){estado('Añade al menos un apartado al documento.');return}
+  var btn=$('btnPDF');btn.disabled=true;estado('Preparando el documento...');
+  var html='';
+  for(var k=0;k<sel.length;k++){
+    var s=sel[k],url='textos/'+s.a.carpeta+'/'+s.t.carpeta+'/'+s.p.archivo,cuerpo;
+    try{
+      var r=await fetch(url,{cache:'no-store'});
+      if(!r.ok)throw new Error(r.status);
+      cuerpo=parsear(await r.text());
+    }catch(e){cuerpo='<p class="aviso">No se ha podido cargar el archivo '+esc(url)+'</p>'}
+    html+='<section class="ap"><div class="ruta">'+esc(s.c.nombre+' — '+s.a.nombre+' — '+s.t.nombre)+'</div><h2>'+esc(s.p.nombre)+'</h2>'+cuerpo+'</section>';
+  }
+  var doc=$('pdf-doc');doc.innerHTML=html;
+  try{
+    await Promise.all([document.fonts.load('12pt "Google Sans"'),document.fonts.load('bold 12pt "Google Sans"')]);
+    await document.fonts.ready;
+  }catch(e){}
+  await esperarImagenes(doc);
+  estado('Generando el PDF...');
+  try{
+    await html2pdf().set({
+      margin:[12,12,12,12],
+      filename:'apuntes.pdf',
+      image:{type:'jpeg',quality:0.95},
+      html2canvas:{scale:2,useCORS:true,scrollX:0,scrollY:0},
+      jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
+      pagebreak:{mode:['css','legacy'],avoid:['p','h2','h3','.figura','.ruta']}
+    }).from(doc).save();
+    estado('PDF generado correctamente.');
+  }catch(e){estado('Error al generar el PDF: '+e.message)}
+  btn.disabled=false;
+};
+
+/* ---------- Inicio ---------- */
+fetch('datos.json',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
+  datos=d;llenar($('selCurso'),datos.cursos,'Seleccionar curso');
+  llenar($('selAsig'),[],'Seleccionar asignatura');llenar($('selTema'),[],'Seleccionar tema');
+}).catch(function(){estado('No se ha podido cargar datos.json.')});
+pintarLista();
+})();
+</script>
+</body>
+</html>
