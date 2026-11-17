@@ -4,11 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>AutoApunte</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='%231a73e8'%3E%3Cpath d='M21 5c-1.11-.35-2.33-.5-3.5-.5-1.95 0-4.05.4-5.5 1.5-1.45-1.1-3.55-1.5-5.5-1.5S2.45 4.9 1 6v14.65c0 .25.25.5.5.5.1 0 .15-.05.25-.05C3.1 20.45 5.05 20 6.5 20c1.95 0 4.05.4 5.5 1.5 1.35-.85 3.8-1.5 5.5-1.5 1.65 0 3.35.3 4.75 1.05.1.05.15.05.25.05.25 0 .5-.25.5-.5V6c-.6-.45-1.25-.75-2-1zm0 13.5c-1.1-.35-2.3-.5-3.5-.5-1.7 0-4.15.65-5.5 1.5V8c1.35-.85 3.8-1.5 5.5-1.5 1.2 0 2.4.15 3.5.5v11.5z'/%3E%3C/svg%3E">
 <link href="https://fonts.googleapis.com/css2?family=Google+Sans:wght@400;500;700&display=swap" rel="stylesheet">
 <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 <style>
-  :root{--primary:#1a73e8;--hover:#1557b0;--bg:#f8f9fa;--surface:#fff;--border:#dadce0;--text:#202124;--muted:#5f6368;--danger:#d93025}
+  :root{--primary:#1a73e8;--hover:#1557b0;--bg:#f8f9fa;--surface:#fff;--border:#dadce0;--text:#202124;--muted:#5f6368;--danger:#d93025;--warning:#b06000;--warning-bg:#fef7e0}
   *{box-sizing:border-box;font-family:'Google Sans','Product Sans',Arial,sans-serif}
   body{background:var(--bg);color:var(--text);margin:0;padding:24px}
   .container{max-width:900px;margin:0 auto}
@@ -26,6 +27,8 @@
   .apartados label{display:flex;align-items:center;gap:10px;font-size:14px;padding:9px 12px;border:1px solid var(--border);border-radius:8px;cursor:pointer}
   .apartados label:hover{background:#f1f3f4}
   .apartados input{accent-color:var(--primary);width:16px;height:16px}
+  .apartados label.nodisp{opacity:.45;cursor:not-allowed;background:#f1f3f4}
+  .apartados .etq{margin-left:auto;font-size:12px;font-weight:500;color:var(--muted);white-space:nowrap}
   button,a.btn{display:inline-flex;align-items:center;gap:8px;padding:10px 16px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text);font-size:14px;font-weight:500;cursor:pointer;transition:all .2s;text-decoration:none}
   button:hover,a.btn:hover{background:#f1f3f4}
   button.primary{background:var(--primary);color:#fff;border-color:var(--primary)}
@@ -39,8 +42,11 @@
   ol li span.txt{flex:1}
   .vacio{font-size:14px;color:var(--muted)}
   #estado{font-size:13px;color:var(--muted);margin-top:12px;min-height:18px}
-
-  /* Vista previa */
+  #toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%);background:#202124;color:#fff;padding:12px 20px;border-radius:8px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:60;max-width:90%;text-align:center}
+  #toast.visible{opacity:1}
+  footer{max-width:900px;margin:32px auto 8px;text-align:center;font-size:13px;line-height:1.6;color:var(--muted)}
+  footer a{color:var(--primary);text-decoration:none;font-weight:500}
+  footer a:hover{text-decoration:underline}
   #modal{position:fixed;inset:0;background:rgba(32,33,36,.6);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
   #modal.abierto{display:flex}
   .modal-caja{background:var(--surface);border-radius:12px;width:100%;max-width:960px;height:100%;max-height:92vh;display:flex;flex-direction:column;overflow:hidden}
@@ -48,20 +54,25 @@
   .modal-cab h3{margin:0;font-size:16px;font-weight:500;flex:1;display:flex;align-items:center;gap:8px;color:var(--primary)}
   .modal-cab button,.modal-cab a.btn{padding:8px 14px}
   #visor{flex:1;width:100%;border:0;background:#e8eaed}
-
-  /* Documento PDF: ancho útil = 210mm - 2x12mm = 186mm. El documento usa solo el 94% como margen de seguridad */
   #zona-render{position:fixed;left:-10000px;top:0;width:186mm}
-  #pdf-doc{width:94%;background:#fff;color:#000;font-size:12pt;line-height:1.5;text-align:left;margin:0;padding:0;
-    text-rendering:geometricPrecision;font-kerning:none;letter-spacing:0;word-spacing:0}
-  #pdf-doc .ap{margin-bottom:22px}
-  #pdf-doc .ruta{font-size:9pt;text-transform:uppercase;letter-spacing:0;color:#5f6368;break-after:avoid;page-break-after:avoid}
-  #pdf-doc h2{font-size:16pt;color:#1a73e8;font-weight:700;margin:4px 0 14px;padding-bottom:6px;border-bottom:1px solid #dadce0;break-after:avoid;page-break-after:avoid}
-  #pdf-doc h3{font-size:13pt;font-weight:700;margin:14px 0 6px;break-after:avoid;page-break-after:avoid}
-  #pdf-doc p{margin:0 0 8px;font-size:12pt;line-height:1.5;text-align:left;overflow-wrap:anywhere;break-inside:avoid;page-break-inside:avoid}
+  #pdf-doc{width:94%;background:#fff;color:#000;font-size:12pt;line-height:1.5;text-align:left;margin:0;padding:0;text-rendering:geometricPrecision}
+  #pdf-doc .ap{margin-bottom:22px;position:relative}
+  #pdf-doc .ap-cuerpo{position:relative;padding:20px}
+  #pdf-doc .ruta{font-size:9pt;text-transform:uppercase;color:#5f6368;break-after:avoid;page-break-after:avoid}
+  #pdf-doc h2{font-size:16pt;color:#1a73e8;font-weight:700;margin:4px 0 14px;padding-bottom:6px;border-bottom:1px solid #dadce0;break-after:avoid}
+  #pdf-doc h3{font-size:13pt;font-weight:700;margin:14px 0 6px;break-after:avoid;white-space:pre-wrap}
+  #pdf-doc p{margin:0 0 8px;font-size:12pt;line-height:1.5;overflow-wrap:anywhere;break-inside:avoid;page-break-inside:avoid;white-space:pre-wrap}
   #pdf-doc strong{font-weight:700}
   #pdf-doc u{text-decoration:underline}
+  #pdf-doc sub,#pdf-doc sup{font-size:75%;line-height:0;position:relative;vertical-align:baseline}
+  #pdf-doc sup{top:-0.5em}
+  #pdf-doc sub{bottom:-0.25em}
+  #pdf-doc .objeto-pdf{position:absolute;z-index:10;transform-origin:0 12px;pointer-events:none}
+  #pdf-doc .objeto-pdf svg{display:block}
   #pdf-doc .figura{text-align:center;margin:10px 0;break-inside:avoid;page-break-inside:avoid}
   #pdf-doc .figura img{max-width:100%;height:auto;display:inline-block}
+  #pdf-doc .juego-link{margin-top:12px;padding:10px 14px;background:#f1f3f4;border-left:3px solid #1a73e8;border-radius:4px;font-size:11pt;break-inside:avoid}
+  #pdf-doc .juego-link a{color:#1a73e8;word-break:break-all;text-decoration:underline}
   #pdf-doc .aviso{color:#d93025;font-style:italic}
 </style>
 </head>
@@ -69,7 +80,7 @@
 <div class="container">
   <header>
     <h1><span class="material-icons-outlined" style="color:var(--primary)">menu_book</span>AutoApunte</h1>
-    <p>Elige los apartados que necesitas y descárgalos juntos en un único PDF.</p>
+    <p>Elige los apartados y descárgalos juntos en un único PDF.</p>
   </header>
 
   <section class="card">
@@ -80,9 +91,7 @@
       <div><label class="t" for="selTema">Tema</label><select id="selTema" disabled></select></div>
     </div>
     <div class="apartados" id="apartados"></div>
-    <div class="acciones">
-      <button id="btnAnadir"><span class="material-icons-outlined">playlist_add</span>Añadir al documento</button>
-    </div>
+    <div class="acciones"><button id="btnAnadir"><span class="material-icons-outlined">playlist_add</span>Añadir al documento</button></div>
   </section>
 
   <section class="card">
@@ -97,7 +106,12 @@
   </section>
 </div>
 
-<!-- Ventana de vista previa -->
+<footer>
+  &copy; 2026. Creado por Emilio's Studio y Claude para <a href="https://sites.google.com/g.educaand.es/recursos-estudiosos/" target="_blank" rel="noopener">Recursos Estudiosos</a>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
 <div id="modal">
   <div class="modal-caja">
     <div class="modal-cab">
@@ -115,10 +129,16 @@
 <script>
 (function(){
 'use strict';
-var datos={cursos:[]}, sel=[], blobVista=null, urlVista=null;
+var datos={cursos:[]}, extras={juegos:{}}, sel=[], blobVista=null, urlVista=null, cache={}, fichaApartados=0;
 var $=function(id){return document.getElementById(id)};
 function esc(t){return String(t).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;')}
 function estado(m){$('estado').textContent=m}
+
+var toastT=null;
+function aviso(msg){
+  var t=$('toast');t.textContent=msg;t.classList.add('visible');
+  clearTimeout(toastT);toastT=setTimeout(function(){t.classList.remove('visible')},2600);
+}
 
 function llenar(s,items,txt){
   s.innerHTML='<option value="">'+txt+'</option>';
@@ -129,46 +149,87 @@ function C(){var i=$('selCurso').value;return i===''?null:datos.cursos[i]}
 function A(){var c=C(),i=$('selAsig').value;return(c&&i!=='')?c.asignaturas[i]:null}
 function T(){var a=A(),i=$('selTema').value;return(a&&i!=='')?a.temas[i]:null}
 
-function pintarApartados(){
-  var cont=$('apartados');cont.innerHTML='';
-  var t=T();if(!t)return;
+function clave(a,t,p){return a.carpeta+'/'+t.carpeta+'/'+p.archivo}
+function urlDe(a,t,p){return 'textos/'+clave(a,t,p)}
+function juegosDe(a,t,p){return extras.juegos[clave(a,t,p)]||[]}
+
+function disponible(url){
+  if(url in cache)return Promise.resolve(cache[url]);
+  return fetch(url,{cache:'no-store'}).then(function(r){return r.ok?r.text():''}).then(function(t){var ok=!!t.trim();cache[url]=ok;return ok}).catch(function(){cache[url]=false;return false});
+}
+
+function pintarApartados(precheckIndex){
+  var cont=$('apartados');cont.innerHTML='';var a=A(),t=T();if(!a||!t)return;
+  var token=++fichaApartados;var etiquetas=[];
   (t.apartados||[]).forEach(function(ap,i){
     var l=document.createElement('label');
-    l.innerHTML='<input type="checkbox" value="'+i+'"> '+esc(ap.nombre);
-    cont.appendChild(l);
+    l.innerHTML='<input type="checkbox" value="'+i+'" disabled> <span>'+esc(ap.nombre)+'</span>';
+    cont.appendChild(l);etiquetas.push(l);
+  });
+  if(!etiquetas.length)return;
+  estado('Comprobando apartados...');
+  Promise.all((t.apartados||[]).map(function(ap){return disponible(urlDe(a,t,ap))})).then(function(res){
+    if(token!==fichaApartados)return;
+    var faltan=0;
+    res.forEach(function(ok,i){
+      var l=etiquetas[i],chk=l.querySelector('input');
+      if(ok){
+        chk.disabled=false;
+        if(precheckIndex===i)chk.checked=true;
+      }else{
+        faltan++;l.classList.add('nodisp');chk.disabled=true;chk.checked=false;
+        l.insertAdjacentHTML('beforeend','<span class="etq">No disponible</span>');
+        l.addEventListener('click',function(e){e.preventDefault();aviso('Este apartado todavía no tiene texto.');});
+      }
+    });
+    estado(faltan?(faltan+' apartado(s) no disponible(s).'):'');
   });
 }
+
 function pintarLista(){
   var ol=$('lista');ol.innerHTML='';
-  if(!sel.length){ol.innerHTML='<li class="vacio" style="border:none">Todavía no has añadido ningún apartado.</li>';return}
+  if(!sel.length){ol.innerHTML='<li class="vacio" style="border:none">No has añadido ningún apartado.</li>';return}
   sel.forEach(function(s,i){
     var li=document.createElement('li');
-    li.innerHTML='<span class="txt">'+esc(s.c.nombre+' / '+s.a.nombre+' / '+s.t.nombre+' / '+s.p.nombre)+'</span>'+
-      '<button class="danger" title="Quitar"><span class="material-icons-outlined">close</span></button>';
+    li.innerHTML='<span class="txt">'+esc(s.c.nombre+' / '+s.a.nombre+' / '+s.t.nombre+' / '+s.p.nombre)+'</span><button class="danger" title="Quitar"><span class="material-icons-outlined">close</span></button>';
     li.querySelector('button').onclick=function(){sel.splice(i,1);pintarLista()};
     ol.appendChild(li);
   });
 }
 
-/* ---------- TXT -> HTML ---------- */
 function inline(t){
   var h=esc(t);
-  h=h.replace(/\*\*([\s\S]+?)\*\*/g,'<strong>$1</strong>');
-  h=h.replace(/__([\s\S]+?)__/g,'<u>$1</u>');
-  return h;
+  return h.replace(/\*\*([\s\S]+?)\*\*/g,'<strong>$1</strong>').replace(/__([\s\S]+?)__/g,'<u>$1</u>').replace(/\^([^\^\n]+?)\^/g,'<sup>$1</sup>').replace(/~([^~\n]+?)~/g,'<sub>$1</sub>');
+}
+function objetoPDF(tipo,x,y,ang,tam,color){
+  x=parseInt(x,10)||60;y=parseInt(y,10)||60;ang=parseInt(ang,10)||0;tam=Math.max(24,parseInt(tam,10)||70);color=color||'#1a73e8';
+  var svg='';
+  if(tipo==='linea-r'){
+    svg='<svg width="'+tam+'" height="24" viewBox="0 0 '+tam+' 24"><line x1="2" y1="12" x2="'+(tam-2)+'" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>';
+  }else if(tipo==='linea-c'){
+    svg='<svg width="'+tam+'" height="24" viewBox="0 0 '+tam+' 24"><path d="M 2 12 Q '+(tam/2)+' 2 '+(tam-2)+' 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/></svg>';
+  }else if(tipo==='flecha-c'){
+    svg='<svg width="'+tam+'" height="24" viewBox="0 0 '+tam+' 24"><path d="M 2 16 Q '+(tam/2)+' 2 '+(tam-10)+' 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><polyline points="'+(tam-16)+',6 '+(tam-6)+',12 '+(tam-16)+',18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }else{
+    svg='<svg width="'+tam+'" height="24" viewBox="0 0 '+tam+' 24"><line x1="2" y1="12" x2="'+(tam-10)+'" y2="12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/><polyline points="'+(tam-16)+',6 '+(tam-6)+',12 '+(tam-16)+',18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+  return '<div class="objeto-pdf" style="left:'+x+'px;top:'+y+'px;color:'+esc(color)+';transform:rotate('+ang+'deg)">'+svg+'</div>';
 }
 function parsear(txt){
   var html='';
-  txt=txt.replace(/\r\n?/g,'\n').replace(/\s*(\[fotos\/[^\]]+\])\s*/g,'\n\n$1\n\n');
+  txt=txt.replace(/\r\n?/g,'\n').replace(/\s*(\[(?:fotos\/[^\]]+|linea-[rc]:[^\]]+|flecha-[rc]:[^\]]+)\])\s*/g,'\n\n$1\n\n');
   txt.split(/\n{2,}/).forEach(function(b){
     var buf=[];
     function vaciar(){if(buf.length){html+='<p>'+buf.map(inline).join('<br>')+'</p>';buf=[]}}
     b.split('\n').forEach(function(l){
-      l=l.trim();if(!l)return;
-      var m=l.match(/^\[(fotos\/[^\]]+)\]$/);
-      if(m){vaciar();html+='<div class="figura"><img src="textos/'+esc(m[1])+'" alt=""></div>'}
-      else if(/^#{2,3}\s+/.test(l)){vaciar();html+='<h3>'+inline(l.replace(/^#{2,3}\s+/,''))+'</h3>'}
-      else buf.push(l);
+      if(!l.trim())return;
+      var lt=l.trim();
+      var mo=lt.match(/^\[(linea-r|linea-c|flecha-r|flecha-c):(-?\d+),(-?\d+),(-?\d+),(\d+)(?:,(#[0-9a-fA-F]{3,6}))?\]$/);
+      var m=lt.match(/^\[(fotos\/[^\]]+)\]$/);
+      if(mo){vaciar();html+=objetoPDF(mo[1],mo[2],mo[3],mo[4],mo[5],mo[6])}
+      else if(m){vaciar();html+='<div class="figura"><img src="textos/'+esc(m[1])+'" alt=""></div>'}
+      else if(/^#{2,3}\s+/.test(lt)){vaciar();html+='<h3>'+inline(lt.replace(/^#{2,3}\s+/,''))+'</h3>'}
+      else buf.push(l.replace(/[\r\n]+$/g,''));
     });
     vaciar();
   });
@@ -176,22 +237,17 @@ function parsear(txt){
 }
 function esperarImagenes(raiz){
   return Promise.all(Array.prototype.map.call(raiz.querySelectorAll('img'),function(img){
-    return new Promise(function(res){
-      if(img.complete){res();return}
-      img.onload=img.onerror=function(){res()};
-    });
+    return new Promise(function(res){if(img.complete){res();return}img.onload=img.onerror=function(){res()}});
   }));
 }
 
-/* ---------- Eventos de selección ---------- */
 $('selCurso').onchange=function(){var c=C();llenar($('selAsig'),c?c.asignaturas:[],'Seleccionar asignatura');llenar($('selTema'),[],'Seleccionar tema');pintarApartados()};
 $('selAsig').onchange=function(){var a=A();llenar($('selTema'),a?a.temas:[],'Seleccionar tema');pintarApartados()};
-$('selTema').onchange=pintarApartados;
+$('selTema').onchange=function(){pintarApartados()};
 
 $('btnAnadir').onclick=function(){
-  var c=C(),a=A(),t=T();
-  if(!c||!a||!t){estado('Selecciona curso, asignatura y tema.');return}
-  var checks=$('apartados').querySelectorAll('input:checked');
+  var c=C(),a=A(),t=T();if(!c||!a||!t){estado('Selecciona curso, asignatura y tema.');return}
+  var checks=$('apartados').querySelectorAll('input:checked:not(:disabled)');
   if(!checks.length){estado('Marca al menos un apartado.');return}
   Array.prototype.forEach.call(checks,function(ch){sel.push({c:c,a:a,t:t,p:t.apartados[ch.value]})});
   pintarLista();estado(checks.length+' apartado(s) añadido(s).');
@@ -199,90 +255,84 @@ $('btnAnadir').onclick=function(){
 };
 $('btnVaciar').onclick=function(){sel=[];pintarLista();estado('')};
 
-/* ---------- Construcción del documento y opciones del PDF ---------- */
 async function preparar(){
   var html='';
   for(var k=0;k<sel.length;k++){
-    var s=sel[k],url='textos/'+s.a.carpeta+'/'+s.t.carpeta+'/'+s.p.archivo,cuerpo;
-    try{
-      var r=await fetch(url,{cache:'no-store'});
-      if(!r.ok)throw new Error(r.status);
-      cuerpo=parsear(await r.text());
-    }catch(e){cuerpo='<p class="aviso">No se ha podido cargar el archivo '+esc(url)+'</p>'}
-    html+='<section class="ap"><div class="ruta">'+esc(s.c.nombre+' — '+s.a.nombre+' — '+s.t.nombre)+'</div><h2>'+esc(s.p.nombre)+'</h2>'+cuerpo+'</section>';
+    var s=sel[k],url=urlDe(s.a,s.t,s.p),cuerpo;
+    try{var r=await fetch(url,{cache:'no-store'});if(!r.ok)throw new Error(r.status);cuerpo=parsear(await r.text());}
+    catch(e){cuerpo='<p class="aviso">No se pudo cargar '+esc(url)+'</p>'}
+    var juegos=juegosDe(s.a,s.t,s.p).filter(function(j){return !!(j.enlace&&j.enlace.trim())});
+    var bloqueJuegos='';
+    if(juegos.length){
+      bloqueJuegos=juegos.map(function(j){
+        return '<div class="juego-link"><strong>'+esc(j.titulo||'Juego interactivo')+':</strong> <a href="'+esc(j.enlace)+'" target="_blank" rel="noopener">'+esc(j.enlace)+'</a></div>';
+      }).join('');
+    }
+    html+='<section class="ap"><div class="ruta">'+esc(s.c.nombre+' — '+s.a.nombre+' — '+s.t.nombre)+'</div><h2>'+esc(s.p.nombre)+'</h2><div class="ap-cuerpo">'+cuerpo+bloqueJuegos+'</div></section>';
   }
   var doc=$('pdf-doc');doc.innerHTML=html;
-  try{
-    await Promise.all([document.fonts.load('12pt "Google Sans"'),document.fonts.load('bold 12pt "Google Sans"')]);
-    await document.fonts.ready;
-  }catch(e){}
-  await esperarImagenes(doc);
-  return doc;
+  try{await Promise.all([document.fonts.load('12pt "Google Sans"'),document.fonts.load('bold 12pt "Google Sans"')]);await document.fonts.ready;}catch(e){}
+  await esperarImagenes(doc);return doc;
 }
 function opciones(){
-  return {
-    margin:[12,12,12,12],
-    filename:'apuntes.pdf',
-    image:{type:'jpeg',quality:0.95},
-    html2canvas:{scale:2,useCORS:true,scrollX:0,scrollY:0},
-    jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},
-    pagebreak:{mode:['css','legacy'],avoid:['p','h2','h3','.figura','.ruta']}
-  };
+  return {margin:[12,12,12,12],filename:'apuntes.pdf',image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy'],avoid:['p','h2','h3','.figura','.ruta','.juego-link']}};
 }
 function ocupado(si){$('btnPDF').disabled=si;$('btnVista').disabled=si}
 
-/* ---------- Descargar directamente ---------- */
 $('btnPDF').onclick=async function(){
-  if(!sel.length){estado('Añade al menos un apartado al documento.');return}
-  ocupado(true);estado('Preparando el documento...');
-  try{
-    var doc=await preparar();
-    estado('Generando el PDF...');
-    await html2pdf().set(opciones()).from(doc).save();
-    estado('PDF generado correctamente.');
-  }catch(e){estado('Error al generar el PDF: '+e.message)}
+  if(!sel.length){estado('Añade apartados.');return}
+  ocupado(true);estado('Generando PDF...');
+  try{var doc=await preparar();await html2pdf().set(opciones()).from(doc).save();estado('PDF generado.');}catch(e){estado('Error: '+e.message)}
   ocupado(false);
 };
 
-/* ---------- Vista previa ---------- */
-function descargarBlob(blob,nombre){
-  var u=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=u;a.download=nombre;document.body.appendChild(a);a.click();a.remove();
-  setTimeout(function(){URL.revokeObjectURL(u)},1000);
-}
 function cerrarVista(){
-  $('modal').classList.remove('abierto');
-  $('visor').removeAttribute('src');
-  if(urlVista){URL.revokeObjectURL(urlVista);urlVista=null}
-  blobVista=null;
+  $('modal').classList.remove('abierto');$('visor').removeAttribute('src');
+  if(urlVista){URL.revokeObjectURL(urlVista);urlVista=null}blobVista=null;
 }
 $('btnVista').onclick=async function(){
-  if(!sel.length){estado('Añade al menos un apartado al documento.');return}
-  ocupado(true);estado('Preparando la vista previa...');
+  if(!sel.length){estado('Añade apartados.');return}
+  ocupado(true);estado('Preparando vista previa...');
   try{
     var doc=await preparar();
-    estado('Generando la vista previa...');
     blobVista=await html2pdf().set(opciones()).from(doc).outputPdf('blob');
     if(urlVista)URL.revokeObjectURL(urlVista);
     urlVista=URL.createObjectURL(blobVista);
-    $('visor').src=urlVista;
-    $('btnPestana').href=urlVista;
-    $('modal').classList.add('abierto');
-    estado('Vista previa lista.');
-  }catch(e){estado('Error al generar la vista previa: '+e.message)}
+    $('visor').src=urlVista;$('btnPestana').href=urlVista;$('modal').classList.add('abierto');estado('Vista previa lista.');
+  }catch(e){estado('Error: '+e.message)}
   ocupado(false);
 };
-$('btnDescargarVista').onclick=function(){if(blobVista)descargarBlob(blobVista,'apuntes.pdf')};
+$('btnDescargarVista').onclick=function(){if(blobVista){var u=URL.createObjectURL(blobVista),a=document.createElement('a');a.href=u;a.download='apuntes.pdf';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u)},1000);}};
 $('btnCerrarVista').onclick=cerrarVista;
 $('modal').addEventListener('click',function(e){if(e.target===$('modal'))cerrarVista()});
-document.addEventListener('keydown',function(e){if(e.key==='Escape'&&$('modal').classList.contains('abierto'))cerrarVista()});
 
-/* ---------- Inicio ---------- */
-fetch('datos.json',{cache:'no-store'}).then(function(r){return r.json()}).then(function(d){
-  datos=d;llenar($('selCurso'),datos.cursos,'Seleccionar curso');
-  llenar($('selAsig'),[],'Seleccionar asignatura');llenar($('selTema'),[],'Seleccionar tema');
-}).catch(function(){estado('No se ha podido cargar datos.json.')});
-pintarLista();
+function aplicarAutoseleccionURL(){
+  var params=new URLSearchParams(location.search);
+  var ci=params.get('c'),ai=params.get('a'),ti=params.get('t'),pi=params.get('p');
+  if(ci===null||ai===null||ti===null||pi===null)return;
+  var c=datos.cursos[ci],a=c&&c.asignaturas[ai],t=a&&a.temas[ti],p=t&&t.apartados[pi];
+  if(!p)return;
+  $('selCurso').value=ci;
+  llenar($('selAsig'),c.asignaturas,'Seleccionar asignatura');
+  $('selAsig').value=ai;
+  llenar($('selTema'),a.temas,'Seleccionar tema');
+  $('selTema').value=ti;
+  pintarApartados(parseInt(pi,10));
+  sel.push({c:c,a:a,t:t,p:p});
+  pintarLista();
+  estado('Apartado "' + p.nombre + '" seleccionado automáticamente.');
+}
+
+Promise.all([
+  fetch('datos.json',{cache:'no-store'}).then(function(r){return r.json()}),
+  fetch('extras.json',{cache:'no-store'}).then(function(r){return r.ok?r.json():{}}).catch(function(){return {}})
+]).then(function(r){
+  datos=r[0];
+  var x=r[1]||{};extras={juegos:x.juegos||{}};
+  llenar($('selCurso'),datos.cursos,'Seleccionar curso');
+  pintarLista();
+  aplicarAutoseleccionURL();
+}).catch(function(){estado('No se pudo cargar datos.json.')});
 })();
 </script>
 </body>
