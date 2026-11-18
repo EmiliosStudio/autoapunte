@@ -54,11 +54,12 @@
   .modal-cab h3{margin:0;font-size:16px;font-weight:500;flex:1;display:flex;align-items:center;gap:8px;color:var(--primary)}
   .modal-cab button,.modal-cab a.btn{padding:8px 14px}
   #visor{flex:1;width:100%;border:0;background:#e8eaed}
-  #zona-render{position:fixed;left:-10000px;top:0;width:186mm}
-  #pdf-doc{width:94%;background:#fff;color:#000;font-size:12pt;line-height:1.5;text-align:left;margin:0;padding:0;text-rendering:geometricPrecision}
-  #pdf-doc .ap{margin-bottom:22px;position:relative}
-  #pdf-doc .ap-cuerpo{position:relative;padding:20px}
-  #pdf-doc .ruta{font-size:9pt;text-transform:uppercase;color:#5f6368;break-after:avoid;page-break-after:avoid}
+  #zona-render{position:absolute;left:-10000px;top:0;width:186mm;margin:0;padding:0}
+  #pdf-doc{width:100%;background:#fff;color:#000;font-size:12pt;line-height:1.5;text-align:left;margin:0;padding:0;text-rendering:geometricPrecision}
+  #pdf-doc > *:first-child{margin-top:0 !important;padding-top:0 !important}
+  #pdf-doc .ap{margin:0 0 22px 0;padding:0;position:relative}
+  #pdf-doc .ap-cuerpo{position:relative;padding:0 12px}
+  #pdf-doc .ruta{font-size:9pt;text-transform:uppercase;color:#5f6368;margin:0;padding:0;break-after:avoid;page-break-after:avoid}
   #pdf-doc h2{font-size:16pt;color:#1a73e8;font-weight:700;margin:4px 0 14px;padding-bottom:6px;border-bottom:1px solid #dadce0;break-after:avoid}
   #pdf-doc h3{font-size:13pt;font-weight:700;margin:14px 0 6px;break-after:avoid;white-space:pre-wrap}
   #pdf-doc p{margin:0 0 8px;font-size:12pt;line-height:1.5;overflow-wrap:anywhere;break-inside:avoid;page-break-inside:avoid;white-space:pre-wrap}
@@ -70,7 +71,7 @@
   #pdf-doc .objeto-pdf{position:absolute;z-index:10;transform-origin:0 12px;pointer-events:none}
   #pdf-doc .objeto-pdf svg{display:block}
   #pdf-doc .figura{text-align:center;margin:10px 0;break-inside:avoid;page-break-inside:avoid}
-  #pdf-doc .figura img{max-width:100%;height:auto;display:inline-block}
+  #pdf-doc .figura img{max-width:100%;max-height:225mm;width:auto;height:auto;display:inline-block;object-fit:contain;break-inside:avoid;page-break-inside:avoid}
   #pdf-doc .juego-link{margin-top:12px;padding:10px 14px;background:#f1f3f4;border-left:3px solid #1a73e8;border-radius:4px;font-size:11pt;break-inside:avoid}
   #pdf-doc .juego-link a{color:#1a73e8;word-break:break-all;text-decoration:underline}
   #pdf-doc .aviso{color:#d93025;font-style:italic}
@@ -240,6 +241,19 @@ function esperarImagenes(raiz){
     return new Promise(function(res){if(img.complete){res();return}img.onload=img.onerror=function(){res()}});
   }));
 }
+function ajustarImagenesPDF(raiz){
+  var pxPorMm=raiz.offsetWidth/186;
+  var maxAltoPx=Math.floor(245*pxPorMm);
+  Array.prototype.forEach.call(raiz.querySelectorAll('.figura img'),function(img){
+    if(!img.naturalWidth||!img.naturalHeight)return;
+    var anchoRender=img.clientWidth||raiz.offsetWidth;
+    var altoRender=anchoRender*(img.naturalHeight/img.naturalWidth);
+    if(altoRender>maxAltoPx){
+      img.style.maxHeight=maxAltoPx+'px';
+      img.style.width='auto';
+    }
+  });
+}
 
 $('selCurso').onchange=function(){var c=C();llenar($('selAsig'),c?c.asignaturas:[],'Seleccionar asignatura');llenar($('selTema'),[],'Seleccionar tema');pintarApartados()};
 $('selAsig').onchange=function(){var a=A();llenar($('selTema'),a?a.temas:[],'Seleccionar tema');pintarApartados()};
@@ -272,10 +286,12 @@ async function preparar(){
   }
   var doc=$('pdf-doc');doc.innerHTML=html;
   try{await Promise.all([document.fonts.load('12pt "Google Sans"'),document.fonts.load('bold 12pt "Google Sans"')]);await document.fonts.ready;}catch(e){}
-  await esperarImagenes(doc);return doc;
+  await esperarImagenes(doc);
+  ajustarImagenesPDF(doc);
+  return doc;
 }
 function opciones(){
-  return {margin:[12,12,12,12],filename:'apuntes.pdf',image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy'],avoid:['p','h2','h3','.figura','.ruta','.juego-link']}};
+  return {margin:[12,12,12,12],filename:'apuntes.pdf',image:{type:'jpeg',quality:0.95},html2canvas:{scale:2,useCORS:true,scrollY:0,scrollX:0},jsPDF:{unit:'mm',format:'a4',orientation:'portrait'},pagebreak:{mode:['css','legacy'],avoid:['p','h2','h3','.figura','.figura img','.ruta','.juego-link']}};
 }
 function ocupado(si){$('btnPDF').disabled=si;$('btnVista').disabled=si}
 
